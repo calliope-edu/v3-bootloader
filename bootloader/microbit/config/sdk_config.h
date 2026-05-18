@@ -1190,8 +1190,13 @@
 // <q> NRF_DFU_BLE_REQUIRES_BONDS  - Require bond with peer.
  
 
+// rc07 campus-open: Calliope mini 3 BLE-DFU without OS bonding.
+// Flipping this 1 → 0 selects the unbonded secure-DFU variant, with the
+// buttonless characteristic exposed at 8EC90003 (instead of 8EC90004) and
+// SEC_OPEN security on the DFU control / packet characteristics. Pairs with
+// MICROBIT_BLE_OPEN=1 + MICROBIT_BLE_SECURITY_MODE=1 in the app's codal.json.
 #ifndef NRF_DFU_BLE_REQUIRES_BONDS
-#define NRF_DFU_BLE_REQUIRES_BONDS 1
+#define NRF_DFU_BLE_REQUIRES_BONDS 0
 #endif
 
 // </h> 
