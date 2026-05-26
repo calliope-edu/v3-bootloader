@@ -917,8 +917,19 @@ static uint32_t gap_address_change(void)
     err_code = sd_ble_gap_addr_get(&addr);
     VERIFY_SUCCESS(err_code);
 
-    /* Increase the BLE address by one when advertising openly. */
-    addr.addr[0] += 1;
+    /* Calliope open-mode mod (2026-05-21): keep the BD_ADDR identical to the
+     * application's. Stock Nordic SDK 17 increments addr[0] here to make the
+     * bootloader distinguishable on-air, but Web Bluetooth pins its
+     * BluetoothDevice handle to the app's MAC — `device.gatt.connect()` then
+     * can't reconnect to the +1 address after the buttonless DFU reboot.
+     * iOS/Android Nordic DFU libraries scan for "DfuTarg" by name and pair
+     * to whatever address advertises, so they don't care; the widget would
+     * need a new chooser/permission for the +1 address which interrupts the
+     * flow. Easier to just keep the address identical — the bootloader's
+     * advertised service set (FE59 only) and adv name ("DfuTarg") still
+     * distinguish it from the app at the GATT layer.
+     */
+    /* addr.addr[0] += 1; */
 
     err_code = sd_ble_gap_addr_set(&addr);
     VERIFY_SUCCESS(err_code);
