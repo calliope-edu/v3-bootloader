@@ -90,7 +90,21 @@ static void on_dfu_complete(nrf_fstorage_evt_t * p_evt)
 
     NRF_LOG_DEBUG("All flash operations have completed. DFU completed.");
 
-    m_observer(NRF_DFU_EVT_DFU_COMPLETED);
+    /* Calliope open-mode fix (2026-06): reboot directly into the freshly
+     * flashed application instead of going through
+     *   m_observer(DFU_COMPLETED) -> nrf_bootloader dfu_observer
+     *     -> bootloader_reset(true) -> nrf_dfu_settings_backup() + busy-wait.
+     * This function is itself the completion callback of
+     * nrf_dfu_settings_write_and_backup(), i.e. it runs in flash-callback context
+     * with the SoftDevice enabled. bootloader_reset(true) then issues a *nested*
+     * settings-backup flash write and busy-waits for it, but that op can never
+     * complete (we never return to the event loop) -> the bootloader hangs in
+     * DFU forever and never reboots. Proven on HW via a rolling event trace:
+     * on_dfu_complete fires (0xE) but DFU_COMPLETED never reaches the observer
+     * and no reset occurs. The settings have already been written AND backed up
+     * by nrf_dfu_settings_write_and_backup() before this callback, so resetting
+     * here is durable and safe. */
+    NVIC_SystemReset();
 }
 
 
