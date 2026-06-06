@@ -1279,8 +1279,15 @@
 // <i> NRF_DFU_OP_CRC_GET, NRF_DFU_OP_RECEIPT_NOTIF_SET, and NRF_DFU_OP_ABORT. 
 // <i> This reduced feature set is used by the BLE transport to reduce flash usage.
 
+// Calliope: enable the full opcode set so the BLE host can query MTU_GET
+// (0x07). With the reduced set the widget's mtuGet() gets OP_CODE_NOT_SUPPORTED
+// and is forced to guess the ATT MTU; on Windows/Chrome the bootloader link
+// often stays at the default 23-byte MTU, so a guessed 244-byte write
+// overflowed and the SoftDevice dropped the link mid-DFU (Mini 3, 2026-06-06).
+// Answering MTU_GET lets the widget pick the correct payload size every time.
+// Costs a little flash for the extra opcode handlers (PING/MTU_GET/etc.).
 #ifndef NRF_DFU_PROTOCOL_REDUCED
-#define NRF_DFU_PROTOCOL_REDUCED 1
+#define NRF_DFU_PROTOCOL_REDUCED 0
 #endif
 
 // <q> NRF_DFU_PROTOCOL_VERSION_MSG  - Protocol version message support.
