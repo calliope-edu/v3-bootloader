@@ -1011,7 +1011,31 @@ static uint32_t ble_stack_init()
 
     /* Enable the BLE stack. */
     NRF_LOG_DEBUG("Enabling the BLE stack.");
-    return nrf_sdh_ble_enable(&ram_start);
+    err_code = nrf_sdh_ble_enable(&ram_start);
+    VERIFY_SUCCESS(err_code);
+
+    /* Calliope hardening: enable connection-event length extension. The stock
+     * Secure DFU bootloader never sets this, so the SoftDevice strictly honours
+     * the short GAP_EVENT_LENGTH and may be unable to drain a large ATT write
+     * that a central fragments into many LL PDUs (MTU 247 with link Data Length
+     * 27) — the link can then stall and drop at the supervision timeout.
+     * Extension lets the SD overstay the reserved event to finish the transfer
+     * when radio time is free. It is disabled by default and must be set after
+     * sd_ble_enable(); harmless and non-fatal if unsupported. (Does NOT fix a
+     * central-side controller that refuses Data-Length Extension — e.g. the
+     * Intel AX200/201 Windows driver bug — but improves resilience on
+     * well-behaved centrals that fragment.) */
+    {
+        ble_opt_t opt;
+        memset(&opt, 0, sizeof(opt));
+        opt.common_opt.conn_evt_ext.enable = 1;
+        ret_code_t ext = sd_ble_opt_set(BLE_COMMON_OPT_CONN_EVT_EXT, &opt);
+        if (ext != NRF_SUCCESS)
+        {
+            NRF_LOG_ERROR("conn_evt_ext enable failed: 0x%x", ext);
+        }
+    }
+    return NRF_SUCCESS;
 }
 
 
