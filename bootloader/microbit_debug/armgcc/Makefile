@@ -12,7 +12,7 @@ $(OUTPUT_DIRECTORY)/nrf52833_xxaa_s140.out: \
 
 # Source files common to all targets
 SRC_FILES += \
-  $(SDK_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52833.S \
+  $(MOD_ROOT)/modules/nrfx/mdk/gcc_startup_nrf52833.S \
   $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52833.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_rtt.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_serial.c \
@@ -55,6 +55,7 @@ SRC_FILES += \
   $(SDK_ROOT)/components/libraries/crypto/nrf_crypto_shared.c \
   $(PROJ_DIR)/dfu_public_key.c \
   $(PROJ_DIR)/main.c \
+  $(PROJ_DIR)/bl_irq_forward.c \
   $(MSDK_ROOT)/microbit_symbol.c \
   $(MSDK_ROOT)/microbit_display.c \
   $(MSDK_ROOT)/microbit_progress.c \
