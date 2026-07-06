@@ -59,6 +59,7 @@
 #include "sdk_macros.h"
 #include "nrf_crypto.h"
 #include "nrf_assert.h"
+#include "nrf_delay.h"
 #include "nrf_dfu_validation.h"
 
 #define NRF_LOG_MODULE_NAME nrf_dfu_req_handler
@@ -104,6 +105,21 @@ static void on_dfu_complete(nrf_fstorage_evt_t * p_evt)
      * and no reset occurs. The settings have already been written AND backed up
      * by nrf_dfu_settings_write_and_backup() before this callback, so resetting
      * here is durable and safe. */
+
+    /* campus-open-v2: tear the BLE link down cleanly before the reset. The
+     * success response for the final EXECUTE was only *queued* (sd_ble_gatts_hvx)
+     * before the settings write; by now the multi-page write has spanned many
+     * connection events, so it has almost certainly drained. An explicit
+     * disconnect makes the central observe the drop immediately instead of
+     * waiting out the 6 s supervision timeout, and leaves a clean slot for the
+     * same-MAC reconnect to the freshly-booted app. We are past all flash ops
+     * (this is the write-completion callback) and we busy-wait then reset
+     * without returning to the event loop, so no BLE_GAP_EVT_DISCONNECTED
+     * handler runs and no advertising is restarted. */
+    extern uint32_t ble_dfu_transport_disconnect(void);
+    (void) ble_dfu_transport_disconnect();
+    nrf_delay_ms(200);
+
     NVIC_SystemReset();
 }
 

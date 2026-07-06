@@ -752,20 +752,15 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         {
             NRF_LOG_DEBUG("Received BLE_GAP_EVT_SEC_PARAMS_REQUEST");
 
-            uint16_t cccd;
-            ble_gatts_value_t gatts_value =
-            {
-                .len     = BLE_CCCD_VALUE_LEN,
-                .p_value = (uint8_t*)&cccd
-            };
-
-            err_code = sd_ble_gatts_value_get(m_conn_handle,
-                                              BLE_UUID_GATT_CHARACTERISTIC_SERVICE_CHANGED,
-                                              &gatts_value);
-            APP_ERROR_CHECK(err_code);
-
-            NRF_LOG_DEBUG("CCCD for service changed is 0x%04x", cccd);
-
+            /* campus-open-v2: removed a stray sd_ble_gatts_value_get() that
+             * passed the Service-Changed characteristic *UUID* (0x2A05) where
+             * an attribute *handle* is expected. It returns NRF_ERROR_NOT_FOUND
+             * and the following APP_ERROR_CHECK() reset the device out of DFU
+             * mode. It only fed a debug log. This path is reachable in open mode
+             * when a connected central initiates pairing on the DFU link (e.g.
+             * an Android phone still holding a legacy bond from the bonded-era
+             * firmware, which falls back to fresh pairing). Just reply
+             * "pairing not supported" and stay in DFU. */
             err_code = sd_ble_gap_sec_params_reply(m_conn_handle,
                                                    BLE_GAP_SEC_STATUS_PAIRING_NOT_SUPP,
                                                    NULL,
@@ -1313,11 +1308,17 @@ uint32_t ble_dfu_transport_close(nrf_dfu_transport_t const * p_exception)
 //            NRF_LOG_DEBUG("BLE transport shut down.");
 //        }
 #else
-        err_code = nrf_sdh_disable_request();
-        if (err_code == NRF_SUCCESS)
-        {
-            NRF_LOG_DEBUG("BLE transport shut down.");
-        }
+// campus-open-v2: same reason as the bonded branch above -- sd_softdevice_disable
+// hangs sometimes. With NRF_DFU_BLE_REQUIRES_BONDS=0 (open mode) this #else
+// branch is compiled in and runs on the DFU abort / transport-close path; the
+// device resets immediately afterwards, so disabling the SoftDevice first buys
+// nothing and can wedge the bootloader dark. Leave it out, matching master's
+// effective behaviour (which built the #if branch).
+//        err_code = nrf_sdh_disable_request();
+//        if (err_code == NRF_SUCCESS)
+//        {
+//            NRF_LOG_DEBUG("BLE transport shut down.");
+//        }
 #endif
     }
 
