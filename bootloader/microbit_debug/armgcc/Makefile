@@ -189,6 +189,10 @@ CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
 # keep every function in a separate section, this allows linker to discard unused ones
 CFLAGS += -ffunction-sections -fdata-sections -fno-strict-aliasing
 CFLAGS += -fno-builtin -fshort-enums
+# GCC 10+ defaults -fno-common; SDK 16 has tentative-definition globals that
+# break without -fcommon. Without this the bootloader runs but data layout
+# is wrong and SoftDevice init fails silently → device boots dark.
+CFLAGS += -fcommon
 
 # C++ flags common to all targets
 CXXFLAGS += $(OPT)

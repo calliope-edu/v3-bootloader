@@ -17,6 +17,7 @@
 #include "nrf.h"
 #include "nrf_mbr.h"          /* MBR_SIZE (0x1000)      */
 #include "nrf_sdm.h"          /* SD_SIZE_GET, SD_SIZE_OFFSET */
+#include "nrf_bootloader_info.h" /* BOOTLOADER_START_ADDR (UICR-derived) */
 
 /* nRF52833 flash page = 4 KiB. */
 #ifndef BL_CODE_PAGE_SIZE
@@ -51,8 +52,10 @@ uint32_t bl_default_irq_forward_target(void)
 
     uint32_t app_base = bl_app_vector_base();
 
-    /* app base must be in application flash, below the bootloader. */
-    if (app_base == 0u || app_base >= 0x77000u)
+    /* app base must be in application flash, below the bootloader. Use the
+     * UICR-derived BOOTLOADER_START_ADDR rather than a literal so the guard is
+     * correct for both the release (0x77000) and debug (0x72000) layouts. */
+    if (app_base == 0u || app_base >= BOOTLOADER_START_ADDR)
     {
         return 0u;
     }
@@ -62,9 +65,9 @@ uint32_t bl_default_irq_forward_target(void)
     /* Reject a slot that is empty or points back into the bootloader (which
      * would just re-enter this trap). Require a valid Thumb code address in
      * the application flash region. */
-    if ((handler & 1u) == 0u)   return 0u;   /* not a Thumb address */
-    if (handler < app_base)     return 0u;
-    if (handler >= 0x77000u)    return 0u;
+    if ((handler & 1u) == 0u)            return 0u;   /* not a Thumb address */
+    if (handler < app_base)              return 0u;
+    if (handler >= BOOTLOADER_START_ADDR) return 0u;
 
     return handler;
 }
